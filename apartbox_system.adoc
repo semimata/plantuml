@@ -1,0 +1,153 @@
+= 宅配マンションBOX管理システム構成図
+:lang: ja
+:doctype: article
+:toc: left
+:toc-title: 目次
+:toclevels: 4
+:pagemums:
+:sectnums:
+:sectnumlevels: 4
+:imagesdir: ../images
+:figure-caption: 図
+:scripts: cjk
+:nofooter: yes
+
+== 作成概要
+
+以下の図を作成する
+
+* システムコンテキスト
+* システムコンテナ
+* システムコンポーネント
+
+=== システムコンテキスト
+
+[plantuml]
+----
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!include <office/users/users.puml>
+' uncomment the following line and comment the first to use locally
+' !include C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title System Context diagram for apartment box managing system
+
+Person(customer, "Apartment Box Managing System User", "Customer of the system.",$sprite="users")
+
+Person(staff, "Apartment Box Managing System Users","Staff of the system.",$sprite="users")
+
+System(boxmanging_system, "Apartment box managing System", "Allows customers and staff to view information about their box information.")
+
+System(mail_system, "E-mail system", "Cloud Provider e-mail service")
+
+System_Ext(box_device, "Box Device")
+
+Rel(customer, boxmanging_system, "Uses")
+Rel(staff, boxmanging_system, "Uses")
+
+Rel_Back(customer, mail_system, "Sends e-mails to")
+Rel_Neighbor(boxmanging_system, mail_system, "Sends e-mails", "SMTP")
+Rel(boxmanging_system, box_device,"Set and Get Information","Websocket")
+
+
+@enduml
+----
+
+=== システムコンテナ
+
+[plantuml]
+----
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+' uncomment the following line and comment the first to use locally
+' !include C4_Container.puml
+
+' LAYOUT_TOP_DOWN()
+' LAYOUT_AS_SKETCH()
+LAYOUT_WITH_LEGEND()
+
+title Container diagram for apartment box managing system
+
+Person(customer, Customer, "Apartment Box Managing System User")
+
+System_Boundary(c1, "apartment box managing") {
+    Container(cdn, "Contents Delivery Network", "Cloud Service", "Delivers the static content and the box manageming SPA")
+    Container(spa, "Single-Page App", "JavaScript, Vue.JS", "Provides all box management function to cutomers via their web browser")
+    ContainerDb(database, "Database", "No SQL ", "Stores user registration information, box information, etc.")
+    Container(backend_api, "API Application", "Node.JS, Container", "Provides box manegment  function via API")
+    Container(email_system, "E-Mail System", "Cloud Provider e-mail service")
+
+}
+
+System_Ext(box_device, "Box Device")
+
+Rel(customer, cdn, "Uses", "HTTPS")
+Rel(customer, spa, "Uses", "HTTPS")
+
+
+Rel_Neighbor(cdn, spa, "Delivers")
+Rel(spa, backend_api, "Uses", "async, JSON/HTTPS")
+Rel_Back_Neighbor(database, backend_api, "Reads from and writes to")
+
+Rel_Back_Neighbor(box_device, backend_api, "Reads from and writes to","sync, Websocket")
+
+Rel_Back(customer, email_system, "Sends e-mails to")
+Rel_Back(email_system, backend_api, "Sends e-mails using", "sync, SMTP")
+@enduml
+
+----
+
+=== システムコンポーネント
+
+[plantuml]
+----
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+' uncomment the following line and comment the first to use locally
+' !include C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for apartment box managing system - API Application
+
+Container(spa, "Single Page Application", "JavaScript, Vue.JS", "Provides all box management function to cutomers via their web browser")
+ContainerDb(db, "NoSQL", "Key-Value Store", "Stores user registration information, box information, etc.")
+
+Container_Boundary(api, "API Application") {
+    Component(auth, "Authentification Component", "Cloud Service", "Provides functionality related to singing in")
+    Component(tenant, "Tenant Management Component", "Serverless-Lambda", "Provides tenant management function")
+    Component(account, "Account Management Component", "Serverless- Lambda", "Provides account management function")
+    Component(device, "Device Management Component", "Serverless-Lambda", "Provides device management function")
+    Component(load, "Load Management Component", "Serverless - Lambda", "Provides load management function")
+    Component(history, "Device History Management Component", "Serverless-Lambda", "Provides device history management function")
+    Component(ota, "OTA Management Component", "Serverless-Lambda", "Provides ota management function")
+
+    Rel(auth, db, "Read & write to")
+    Rel(tenant, db, "Read & write to")
+    Rel(account, db, "Read & write to")
+    Rel(device, db, "Read & write to")
+    Rel(load, db, "Read & write to")
+    Rel(history, db, "Read & write to")
+    Rel(ota, db, "Read & write to")
+
+}
+
+System_Ext(auth_service, "Authentification Service")
+System_Ext(object_storage, "Object Storage")
+
+Rel(auth,auth_service,"Uses")
+Rel(spa, auth, "Uses", "HTTPS")
+Rel(spa, tenant, "Uses", "HTTPS, Token")
+Rel(spa, account, "Uses", "HTTPS, Token")
+Rel(spa, device, "Uses", "HTTPS, Token")
+Rel(spa, load, "Uses", "HTTPS, Token")
+Rel(spa, history, "Uses", "HTTPS, Token")
+Rel(spa, ota, "Uses", "HTTPS, Token")
+
+Rel(spa, account, "Uses", "JSON/HTTPS")
+Rel(db, object_storage,"move long data from NoSQL to Object Storage", "HTTPS")
+
+@enduml
+----
